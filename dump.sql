@@ -34,16 +34,15 @@ CREATE TYPE composition AS ENUM (
     'Reserve',
     'Double',
     'Youth',
-    'Other',
-    'Forward'
+    'Other'
 );
 
 
 --
--- Name: coverage; Type: TYPE; Schema: public; Owner: -
+-- Name: lawn; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE coverage AS ENUM (
+CREATE TYPE lawn AS ENUM (
     'Synthetic',
     'Natural'
 );
@@ -62,10 +61,10 @@ CREATE TYPE role AS ENUM (
 
 
 --
--- Name: warning_card; Type: TYPE; Schema: public; Owner: -
+-- Name: warning; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE warning_card AS ENUM (
+CREATE TYPE warning AS ENUM (
     'Red',
     'Yellow'
 );
@@ -81,8 +80,8 @@ SET default_with_oids = false;
 
 CREATE TABLE assists (
     assist_id integer NOT NULL,
-    match_id smallint,
-    player_id smallint,
+    match_id smallint NOT NULL,
+    player_id smallint NOT NULL,
     moment numeric(3,0) NOT NULL,
     CONSTRAINT assists_moment_check CHECK (((moment > (0)::numeric) AND (moment < (150)::numeric)))
 );
@@ -108,42 +107,13 @@ ALTER SEQUENCE assists_assist_id_seq OWNED BY assists.assist_id;
 
 
 --
--- Name: championship; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE TABLE championship (
-    championship_id integer NOT NULL,
-    name character varying(128)
-);
-
-
---
--- Name: championship_championship_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE championship_championship_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: championship_championship_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE championship_championship_id_seq OWNED BY championship.championship_id;
-
-
---
 -- Name: goals; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
 CREATE TABLE goals (
     goal_id integer NOT NULL,
-    match_id smallint,
-    player_id smallint,
+    match_id smallint NOT NULL,
+    player_id smallint NOT NULL,
     moment numeric(3,0) NOT NULL,
     CONSTRAINT goals_moment_check CHECK (((moment > (0)::numeric) AND (moment < (150)::numeric)))
 );
@@ -177,7 +147,7 @@ CREATE TABLE judge (
     lname character varying(64) NOT NULL,
     fname character varying(64) NOT NULL,
     surname character varying(64),
-    city character varying(64),
+    hometown character varying(64),
     birth_date date NOT NULL,
     cityzenship character varying(16)
 );
@@ -208,12 +178,13 @@ ALTER SEQUENCE judge_judge_id_seq OWNED BY judge.judge_id;
 
 CREATE TABLE matchs (
     match_id integer NOT NULL,
-    status_id smallint,
-    owner_id smallint,
-    guest_id smallint,
-    judge_id smallint,
+    tournament_id smallint,
+    stage_tournament character varying(8),
+    host_id smallint NOT NULL,
+    guest_id smallint NOT NULL,
+    judge_id smallint NOT NULL,
     match_date date NOT NULL,
-    stadium_id integer,
+    stadium_id integer NOT NULL,
     viewers numeric(7,0),
     CONSTRAINT positive_viewers CHECK ((viewers >= (0)::numeric))
 );
@@ -244,15 +215,15 @@ ALTER SEQUENCE matchs_match_id_seq OWNED BY matchs.match_id;
 
 CREATE TABLE players (
     player_id integer NOT NULL,
-    fname character varying(64) NOT NULL,
-    lname character varying(64) NOT NULL,
+    first_name character varying(64) NOT NULL,
+    last_name character varying(64) NOT NULL,
     surname character varying(64),
     birth_date date NOT NULL,
     hometown character varying(64),
     team_id smallint,
     number numeric(2,0),
     team_composition composition NOT NULL,
-    team_role role NOT NULL,
+    "position" role NOT NULL,
     citizenship character varying(32) NOT NULL,
     height numeric(3,0),
     weight numeric(3,0),
@@ -290,9 +261,10 @@ CREATE TABLE stadium (
     name character varying(64) NOT NULL,
     address character varying(64) NOT NULL,
     capacity integer,
-    stadium_coverage coverage,
-    opened smallint NOT NULL,
-    CONSTRAINT positive_capacity CHECK ((capacity > 0))
+    type_lawn lawn,
+    opening_date smallint NOT NULL,
+    CONSTRAINT positive_capacity CHECK ((capacity >= 0)),
+    CONSTRAINT stadium_opening_date_check CHECK ((opening_date > 0))
 );
 
 
@@ -321,10 +293,10 @@ ALTER SEQUENCE stadium_stadium_id_seq OWNED BY stadium.stadium_id;
 
 CREATE TABLE team (
     team_id integer NOT NULL,
-    name character varying(64),
+    name character varying(64) NOT NULL,
     coach character varying(64) NOT NULL,
     city character varying(64) NOT NULL,
-    stadium_id smallint
+    stadium_id smallint NOT NULL
 );
 
 
@@ -348,13 +320,42 @@ ALTER SEQUENCE team_team_id_seq OWNED BY team.team_id;
 
 
 --
+-- Name: tournament; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE tournament (
+    tournament_id integer NOT NULL,
+    name character varying(128)
+);
+
+
+--
+-- Name: tournament_tournament_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE tournament_tournament_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tournament_tournament_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE tournament_tournament_id_seq OWNED BY tournament.tournament_id;
+
+
+--
 -- Name: trauma; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
 CREATE TABLE trauma (
     trauma_id integer NOT NULL,
-    match_id smallint,
-    player_id smallint,
+    match_id smallint NOT NULL,
+    player_id smallint NOT NULL,
     moment numeric(3,0) NOT NULL,
     description character varying(128),
     CONSTRAINT trauma_moment_check CHECK (((moment > (0)::numeric) AND (moment < (150)::numeric)))
@@ -366,7 +367,7 @@ CREATE TABLE trauma (
 --
 
 CREATE SEQUENCE trauma_trauma_id_seq
-    START WITH 1
+    START WITH 11
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
@@ -386,10 +387,10 @@ ALTER SEQUENCE trauma_trauma_id_seq OWNED BY trauma.trauma_id;
 
 CREATE TABLE warnings (
     warning_id integer NOT NULL,
-    match_id smallint,
-    player_id smallint,
+    match_id smallint NOT NULL,
+    player_id smallint NOT NULL,
     moment numeric(3,0) NOT NULL,
-    type warning_card,
+    type warning,
     CONSTRAINT warnings_moment_check CHECK (((moment > (0)::numeric) AND (moment < (150)::numeric)))
 );
 
@@ -418,13 +419,6 @@ ALTER SEQUENCE warnings_warning_id_seq OWNED BY warnings.warning_id;
 --
 
 ALTER TABLE ONLY assists ALTER COLUMN assist_id SET DEFAULT nextval('assists_assist_id_seq'::regclass);
-
-
---
--- Name: championship_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY championship ALTER COLUMN championship_id SET DEFAULT nextval('championship_championship_id_seq'::regclass);
 
 
 --
@@ -470,6 +464,13 @@ ALTER TABLE ONLY team ALTER COLUMN team_id SET DEFAULT nextval('team_team_id_seq
 
 
 --
+-- Name: tournament_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY tournament ALTER COLUMN tournament_id SET DEFAULT nextval('tournament_tournament_id_seq'::regclass);
+
+
+--
 -- Name: trauma_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -499,13 +500,13 @@ COPY assists (assist_id, match_id, player_id, moment) FROM stdin;
 9	3	92	18
 10	4	363	81
 11	5	221	87
-12	5	\N	61
+12	5	62	61
 13	5	62	48
 14	5	221	38
 15	5	70	36
 16	5	221	33
 17	5	62	28
-18	6	\N	76
+18	6	141	76
 19	6	141	18
 20	8	283	80
 21	8	281	76
@@ -517,7 +518,7 @@ COPY assists (assist_id, match_id, player_id, moment) FROM stdin;
 27	12	81	54
 28	12	92	33
 29	12	84	26
-30	13	\N	87
+30	13	284	87
 31	13	284	58
 32	14	265	17
 33	15	317	60
@@ -539,23 +540,7 @@ COPY assists (assist_id, match_id, player_id, moment) FROM stdin;
 -- Name: assists_assist_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('assists_assist_id_seq', 1, false);
-
-
---
--- Data for Name: championship; Type: TABLE DATA; Schema: public; Owner: -
---
-
-COPY championship (championship_id, name) FROM stdin;
-1	Chempionat Rossii 2014/2015
-\.
-
-
---
--- Name: championship_championship_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
---
-
-SELECT pg_catalog.setval('championship_championship_id_seq', 1, false);
+SELECT pg_catalog.setval('assists_assist_id_seq', 47, true);
 
 
 --
@@ -592,7 +577,7 @@ COPY goals (goal_id, match_id, player_id, moment) FROM stdin;
 27	5	55	28
 28	5	71	15
 29	6	131	76
-30	6	\N	18
+30	6	131	18
 31	8	284	88
 32	8	281	80
 33	8	282	76
@@ -603,7 +588,7 @@ COPY goals (goal_id, match_id, player_id, moment) FROM stdin;
 38	10	221	25
 39	10	131	6
 40	11	378	79
-41	12	\N	86
+41	12	93	86
 42	12	93	78
 43	12	93	72
 44	12	82	62
@@ -618,13 +603,13 @@ COPY goals (goal_id, match_id, player_id, moment) FROM stdin;
 53	14	70	3
 54	15	333	60
 55	15	105	21
-56	16	\N	83
+56	16	153	83
 57	16	153	53
 58	17	24	62
 59	17	296	43
 60	18	71	62
 61	18	55	31
-62	19	\N	73
+62	19	324	73
 63	19	324	34
 64	19	81	6
 66	21	369	4
@@ -642,14 +627,14 @@ COPY goals (goal_id, match_id, player_id, moment) FROM stdin;
 -- Name: goals_goal_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('goals_goal_id_seq', 1, false);
+SELECT pg_catalog.setval('goals_goal_id_seq', 77, false);
 
 
 --
 -- Data for Name: judge; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY judge (judge_id, lname, fname, surname, city, birth_date, cityzenship) FROM stdin;
+COPY judge (judge_id, lname, fname, surname, hometown, birth_date, cityzenship) FROM stdin;
 1	Vladimir	Moskalev	Viktorovich	Voronej	1983-09-03	Rossiya
 2	Sergey	Karasev	Gennadevich	Moskva	1979-06-12	Rossiya
 3	Vitaliy	Meshkov	Petrovich	Dmitrov	1983-02-18	Rossiya
@@ -665,38 +650,38 @@ COPY judge (judge_id, lname, fname, surname, city, birth_date, cityzenship) FROM
 -- Name: judge_judge_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('judge_judge_id_seq', 1, false);
+SELECT pg_catalog.setval('judge_judge_id_seq', 9, false);
 
 
 --
 -- Data for Name: matchs; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY matchs (match_id, status_id, owner_id, guest_id, judge_id, match_date, stadium_id, viewers) FROM stdin;
-1	1	9	10	1	2014-08-01	2	12000
-2	1	13	7	2	2014-08-02	9	3223
-3	1	2	4	3	2014-08-02	16	15678
-4	1	15	12	4	2014-08-02	10	1632
-5	1	3	8	5	2014-08-03	10	4500
-6	1	16	14	6	2014-08-03	5	18900
-7	1	6	5	7	2014-08-03	8	21000
-8	1	11	1	8	2014-08-04	6	23547
-9	1	11	1	1	2014-08-04	6	23456
-10	1	16	8	2	2014-08-08	5	4500
-11	1	7	15	3	2014-08-09	15	23321
-12	1	4	12	4	2014-08-09	1	12345
-13	1	11	9	5	2014-08-09	6	32455
-14	1	3	10	6	2014-08-10	10	34754
-15	1	13	5	7	2014-08-10	9	16452
-16	1	2	6	8	2014-08-10	16	12500
-17	1	12	1	1	2014-08-12	13	37032
-18	1	14	3	2	2014-08-13	14	16723
-19	1	13	4	3	2014-08-13	9	43201
-20	1	2	9	4	2014-08-13	16	19800
-21	1	15	11	5	2014-08-13	10	12521
-22	1	6	8	6	2014-08-14	8	3245
-23	1	5	10	7	2014-08-14	5	15678
-24	1	7	16	8	2014-08-15	15	32000
+COPY matchs (match_id, tournament_id, stage_tournament, host_id, guest_id, judge_id, match_date, stadium_id, viewers) FROM stdin;
+1	1	1	9	10	1	2014-08-01	2	12000
+2	1	1	13	7	2	2014-08-02	9	3223
+3	1	1	2	4	3	2014-08-02	16	15678
+4	1	1	15	12	4	2014-08-02	10	1632
+5	1	1	3	8	5	2014-08-03	10	4500
+6	1	1	16	14	6	2014-08-03	5	18900
+7	1	1	6	5	7	2014-08-03	8	21000
+8	1	1	11	1	8	2014-08-04	6	23547
+9	1	2	11	1	1	2014-08-04	6	23456
+10	1	2	16	8	2	2014-08-08	5	4500
+11	1	2	7	15	3	2014-08-09	15	23321
+12	1	2	4	12	4	2014-08-09	1	12345
+13	1	2	11	9	5	2014-08-09	6	32455
+14	1	2	3	10	6	2014-08-10	10	34754
+15	1	2	13	5	7	2014-08-10	9	16452
+16	1	2	2	6	8	2014-08-10	16	12500
+17	1	3	12	1	1	2014-08-12	13	37032
+18	1	3	14	3	2	2014-08-13	14	16723
+19	1	3	13	4	3	2014-08-13	9	43201
+20	1	3	2	9	4	2014-08-13	16	19800
+21	1	3	15	11	5	2014-08-13	10	12521
+22	1	3	6	8	6	2014-08-14	8	3245
+23	1	3	5	10	7	2014-08-14	5	15678
+24	1	3	7	16	8	2014-08-15	15	32000
 \.
 
 
@@ -704,14 +689,14 @@ COPY matchs (match_id, status_id, owner_id, guest_id, judge_id, match_date, stad
 -- Name: matchs_match_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('matchs_match_id_seq', 1, false);
+SELECT pg_catalog.setval('matchs_match_id_seq', 25, true);
 
 
 --
 -- Data for Name: players; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY players (player_id, fname, lname, surname, birth_date, hometown, team_id, number, team_composition, team_role, citizenship, height, weight) FROM stdin;
+COPY players (player_id, first_name, last_name, surname, birth_date, hometown, team_id, number, team_composition, "position", citizenship, height, weight) FROM stdin;
 1	Roman	Gerus	Vladimirovich	1980-09-14	Tihoretsk	1	1	Main	Keeper	Rossiya	192	86
 2	Sergey	Narubin	Vladimirovich	1981-12-05	\N	1	42	Main	Keeper	Rossiya	196	94
 3	Petar	Zanev	\N	1985-10-18	\N	1	3	Main	Back	Bolgariya	180	70
@@ -1070,14 +1055,14 @@ COPY players (player_id, fname, lname, surname, birth_date, hometown, team_id, n
 -- Name: players_player_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('players_player_id_seq', 1, false);
+SELECT pg_catalog.setval('players_player_id_seq', 382, false);
 
 
 --
 -- Data for Name: stadium; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY stadium (stadium_id, name, address, capacity, stadium_coverage, opened) FROM stdin;
+COPY stadium (stadium_id, name, address, capacity, type_lawn, opening_date) FROM stdin;
 1	Petrovskiy	Sankt-Peterburg	21504	Natural	1925
 2	Kazan-Arena	Kazan	45105	Synthetic	2013
 3	Otkryitie-Arena	Moskva	45000	Synthetic	2014
@@ -1101,7 +1086,7 @@ COPY stadium (stadium_id, name, address, capacity, stadium_coverage, opened) FRO
 -- Name: stadium_stadium_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('stadium_stadium_id_seq', 1, false);
+SELECT pg_catalog.setval('stadium_stadium_id_seq', 17, false);
 
 
 --
@@ -1132,7 +1117,25 @@ COPY team (team_id, name, coach, city, stadium_id) FROM stdin;
 -- Name: team_team_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('team_team_id_seq', 1, false);
+SELECT pg_catalog.setval('team_team_id_seq', 17, false);
+
+
+--
+-- Data for Name: tournament; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY tournament (tournament_id, name) FROM stdin;
+1	Chempionat Rossii 2014/2015
+2	Kubok Rossii 2014/2015
+3	Kubok Pervogo kanala
+\.
+
+
+--
+-- Name: tournament_tournament_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('tournament_tournament_id_seq', 4, false);
 
 
 --
@@ -1140,6 +1143,19 @@ SELECT pg_catalog.setval('team_team_id_seq', 1, false);
 --
 
 COPY trauma (trauma_id, match_id, player_id, moment, description) FROM stdin;
+1	2	182	59	\N
+2	2	334	35	\N
+3	8	3	68	\N
+4	14	263	72	\N
+5	14	259	66	\N
+6	14	56	61	\N
+7	22	263	72	\N
+8	22	259	66	\N
+9	22	56	61	\N
+10	22	149	16	\N
+11	23	270	20	\N
+12	23	265	10	\N
+13	24	185	77	\N
 \.
 
 
@@ -1147,7 +1163,7 @@ COPY trauma (trauma_id, match_id, player_id, moment, description) FROM stdin;
 -- Name: trauma_trauma_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('trauma_trauma_id_seq', 1, false);
+SELECT pg_catalog.setval('trauma_trauma_id_seq', 14, false);
 
 
 --
@@ -1182,7 +1198,7 @@ COPY warnings (warning_id, match_id, player_id, moment, type) FROM stdin;
 25	7	100	67	Yellow
 26	7	149	59	Yellow
 27	7	106	44	Yellow
-28	7	\N	30	Yellow
+28	7	105	30	Yellow
 29	7	150	25	Yellow
 30	8	285	71	Yellow
 31	8	19	67	Yellow
@@ -1201,7 +1217,7 @@ COPY warnings (warning_id, match_id, player_id, moment, type) FROM stdin;
 44	11	380	47	Yellow
 45	11	378	26	Yellow
 46	12	307	82	Yellow
-47	12	\N	71	Yellow
+47	12	306	71	Yellow
 48	12	92	45	Yellow
 49	12	76	40	Yellow
 50	12	92	19	Yellow
@@ -1232,7 +1248,7 @@ COPY warnings (warning_id, match_id, player_id, moment, type) FROM stdin;
 75	19	327	90	Yellow
 76	19	322	89	Yellow
 77	19	75	51	Yellow
-78	20	\N	90	Yellow
+78	20	76	90	Yellow
 79	20	239	90	Yellow
 80	20	235	85	Yellow
 81	20	49	74	Yellow
@@ -1264,7 +1280,7 @@ COPY warnings (warning_id, match_id, player_id, moment, type) FROM stdin;
 -- Name: warnings_warning_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('warnings_warning_id_seq', 1, false);
+SELECT pg_catalog.setval('warnings_warning_id_seq', 116, false);
 
 
 --
@@ -1273,22 +1289,6 @@ SELECT pg_catalog.setval('warnings_warning_id_seq', 1, false);
 
 ALTER TABLE ONLY assists
     ADD CONSTRAINT assists_pkey PRIMARY KEY (assist_id);
-
-
---
--- Name: championship_name_key; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
---
-
-ALTER TABLE ONLY championship
-    ADD CONSTRAINT championship_name_key UNIQUE (name);
-
-
---
--- Name: championship_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
---
-
-ALTER TABLE ONLY championship
-    ADD CONSTRAINT championship_pkey PRIMARY KEY (championship_id);
 
 
 --
@@ -1332,11 +1332,11 @@ ALTER TABLE ONLY stadium
 
 
 --
--- Name: team_name_key; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: team_name_city_key; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
 --
 
 ALTER TABLE ONLY team
-    ADD CONSTRAINT team_name_key UNIQUE (name);
+    ADD CONSTRAINT team_name_city_key UNIQUE (name, city);
 
 
 --
@@ -1345,6 +1345,22 @@ ALTER TABLE ONLY team
 
 ALTER TABLE ONLY team
     ADD CONSTRAINT team_pkey PRIMARY KEY (team_id);
+
+
+--
+-- Name: tournament_name_key; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY tournament
+    ADD CONSTRAINT tournament_name_key UNIQUE (name);
+
+
+--
+-- Name: tournament_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY tournament
+    ADD CONSTRAINT tournament_pkey PRIMARY KEY (tournament_id);
 
 
 --
@@ -1404,19 +1420,19 @@ ALTER TABLE ONLY matchs
 
 
 --
+-- Name: matchs_host_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY matchs
+    ADD CONSTRAINT matchs_host_id_fkey FOREIGN KEY (host_id) REFERENCES team(team_id);
+
+
+--
 -- Name: matchs_judge_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY matchs
     ADD CONSTRAINT matchs_judge_id_fkey FOREIGN KEY (judge_id) REFERENCES judge(judge_id);
-
-
---
--- Name: matchs_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY matchs
-    ADD CONSTRAINT matchs_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES team(team_id);
 
 
 --
@@ -1428,11 +1444,11 @@ ALTER TABLE ONLY matchs
 
 
 --
--- Name: matchs_status_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: matchs_tournament_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY matchs
-    ADD CONSTRAINT matchs_status_id_fkey FOREIGN KEY (status_id) REFERENCES championship(championship_id);
+    ADD CONSTRAINT matchs_tournament_id_fkey FOREIGN KEY (tournament_id) REFERENCES tournament(tournament_id);
 
 
 --
